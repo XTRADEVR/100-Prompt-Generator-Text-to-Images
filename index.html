@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PromptGrid 100 - Generator Text-to-Image 1-100</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #09090b; color: #f4f4f5; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #09090b; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+    .img-loading { background: linear-gradient(110deg, #18181b 8%, #27272a 18%, #18181b 33%); background-size: 200% 100%; animation: 1.5s shine linear infinite; }
+    @keyframes shine { to { background-position-x: -200%; } }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-neutral-950 text-neutral-100 antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/85 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-600/30">
+          100
+        </div>
+        <div>
+          <h1 class="font-bold text-lg text-white leading-tight">PromptGrid 100</h1>
+          <p class="text-xs text-neutral-400">100 Visual Variations · Text-to-Image Studio</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-xs">
+        <span id="loadedCounter" class="font-mono text-neutral-400">Siap membuat 100 gambar</span>
+        <button id="downloadAllBtn" onclick="downloadAllManifest()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-200 hover:bg-neutral-800 hover:text-white transition cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export Katalog JSON
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-8">
+    
+    <!-- INPUT & CONTROL PANEL -->
+    <section class="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+      <div class="space-y-4">
+        <div>
+          <label for="promptInput" class="block text-sm font-semibold text-neutral-200 mb-2">
+            Prompt Utama (Text-to-Image 1-100)
+          </label>
+          <div class="relative">
+            <textarea
+              id="promptInput"
+              rows="3"
+              class="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-3.5 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
+              placeholder="Contoh: A futuristic cyberpunk samurai in rainy Tokyo street at midnight, neon reflections, intricate armor..."
+            >Futuristic cyberpunk samurai standing in a rainy Tokyo street at night, neon reflections on wet asphalt, glowing katana sword, intricate carbon armor</textarea>
+          </div>
+        </div>
+
+        <!-- QUICK PRESETS -->
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <span class="text-neutral-500 font-medium">Contoh Cepat:</span>
+          <button onclick="setPrompt('Cyberpunk samurai with glowing katana in rainy Tokyo alley, neon reflections, 8k cinematic')" class="px-2.5 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition cursor-pointer">Cyberpunk</button>
+          <button onclick="setPrompt('Mystical floating fantasy castle surrounded by purple clouds, waterfalls falling into the sky, crystalline ruins')" class="px-2.5 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition cursor-pointer">Fantasy Castle</button>
+          <button onclick="setPrompt('Hyperrealistic portrait of a royal Bengal tiger walking through misty morning jungle, dew drops on fur')" class="px-2.5 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition cursor-pointer">Wildlife Photo</button>
+          <button onclick="setPrompt('Cozy anime coffee shop in rain with barista, holographic pet, steam and warm amber light')" class="px-2.5 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition cursor-pointer">Anime Cafe</button>
+        </div>
+
+        <!-- ENGINE & CONTROLS ROW -->
+        <div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-neutral-800">
+          <div class="flex flex-wrap items-center gap-3">
+            <div>
+              <label class="text-xs text-neutral-400 block mb-1">Layanan Gambar:</label>
+              <select id="engineSelect" class="bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-1.5 text-xs text-neutral-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <option value="pollinations" selected>Pollinations.ai (Real AI Generative)</option>
+                <option value="picsum">Picsum Photos (Diverse Aesthetic)</option>
+                <option value="unsplash">Unsplash Photography</option>
+                <option value="svg">Procedural SVG (Instant / Offline)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-neutral-400 block mb-1">Kerapatan Kolom Grid:</label>
+              <select id="gridColSelect" onchange="updateGridColumns(this.value)" class="bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-1.5 text-xs text-neutral-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <option value="10">10 Kolom (10x10 Full Grid)</option>
+                <option value="6" selected>6 Kolom (Standar)</option>
+                <option value="4">4 Kolom (Lebar)</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            id="generateBtn"
+            onclick="startGeneration()"
+            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition active:scale-95 cursor-pointer"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Generate 100 Images
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOADING & STATS BAR -->
+    <div id="loadingBarContainer" class="hidden space-y-2 bg-neutral-900/50 border border-neutral-800 p-4 rounded-xl">
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-indigo-400 font-medium flex items-center gap-2">
+          <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          Sedang merender 100 variasi gambar...
+        </span>
+        <span id="progressText" class="font-mono text-neutral-300">0 / 100 dimuat (0%)</span>
+      </div>
+      <div class="w-full bg-neutral-800 h-2 rounded-full overflow-hidden">
+        <div id="progressBar" class="bg-indigo-500 h-full w-0 transition-all duration-200"></div>
+      </div>
+    </div>
+
+    <!-- FILTER TABS (JUMP TO 1-25, 26-50, etc.) -->
+    <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-1.5 p-1 bg-neutral-900 border border-neutral-800 rounded-lg">
+        <button onclick="filterRange('all')" class="range-btn active px-3 py-1.5 rounded-md font-medium bg-neutral-800 text-white cursor-pointer">Semua (1-100)</button>
+        <button onclick="filterRange('1-25')" class="range-btn px-3 py-1.5 rounded-md text-neutral-400 hover:text-white cursor-pointer">1 - 25</button>
+        <button onclick="filterRange('26-50')" class="range-btn px-3 py-1.5 rounded-md text-neutral-400 hover:text-white cursor-pointer">26 - 50</button>
+        <button onclick="filterRange('51-75')" class="range-btn px-3 py-1.5 rounded-md text-neutral-400 hover:text-white cursor-pointer">51 - 75</button>
+        <button onclick="filterRange('76-100')" class="range-btn px-3 py-1.5 rounded-md text-neutral-400 hover:text-white cursor-pointer">76 - 100</button>
+      </div>
+      <div class="text-neutral-500 text-xs">
+        Klik kartu manapun untuk memperbesar (Lightbox)
+      </div>
+    </div>
+
+    <!-- 100 IMAGES GRID (1x1 s/d 10x10) -->
+    <section>
+      <div id="gridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+        <!-- 100 Card items injected here -->
+      </div>
+    </section>
+  </main>
+
+  <!-- LIGHTBOX MODAL -->
+  <div id="lightboxModal" class="fixed inset-0 z-50 hidden bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="relative max-w-4xl w-full bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-neutral-950">
+        <div class="flex items-center gap-3">
+          <span id="modalNumberBadge" class="font-mono text-xs px-2.5 py-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">#001 / 100</span>
+          <span id="modalVariationName" class="text-sm font-semibold text-white">Variation Name</span>
+        </div>
+        <button onclick="closeLightbox()" class="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Image Body -->
+      <div class="relative flex-1 bg-black flex items-center justify-center min-h-[360px] max-h-[60vh] overflow-hidden group">
+        <img id="modalImage" src="" alt="High resolution view" class="max-h-full max-w-full object-contain" />
+        
+        <!-- Prev & Next Arrow Buttons -->
+        <button onclick="navigateLightbox(-1)" class="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-neutral-700 transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <button onclick="navigateLightbox(1)" class="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-neutral-700 transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-5 bg-neutral-950 border-t border-neutral-800 space-y-3">
+        <div>
+          <div class="text-xs font-medium text-neutral-400 mb-1">Prompt Lengkap:</div>
+          <p id="modalFullPrompt" class="text-xs text-neutral-200 bg-neutral-900 p-2.5 rounded-lg border border-neutral-800 font-mono leading-relaxed select-all"></p>
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-1">
+          <button onclick="copyModalPrompt()" class="px-3.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-medium text-neutral-200 flex items-center gap-1.5 transition cursor-pointer">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+            Salin Prompt
+          </button>
+          <button onclick="downloadModalImage()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white flex items-center gap-1.5 transition shadow cursor-pointer">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download Gambar (.jpg)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-2xl flex items-center gap-2 pointer-events-none">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <span id="toastMsg">Teks disalin ke clipboard</span>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    const VARIATIONS = [
+      "Golden Hour Glow, soft warm sunset light, cinematic haze",
+      "Cinematic Chiaroscuro, dramatic contrast, deep shadows",
+      "Neon Backlight, electric rim glow, wet reflection",
+      "Volumetric Sunbeams, god rays, atmospheric mist",
+      "Moody Twilight, violet and dusk ambiance",
+      "Studio Softbox, diffused clean product light",
+      "Candlelight Glow, intimate warmth, soft bokeh",
+      "Solar Eclipse, corona backlight silhouette",
+      "Overcast Soft Sky, natural realism, gentle shadows",
+      "Bioluminescent Aura, organic neon light emission",
+      "High-Key Pure Light, clean white luminosity",
+      "Low-Key Noir, venetian blind cast shadows",
+      "Moonlit Silver Rim, midnight cool illumination",
+      "Prismatic Rainbow, crystal caustic refraction",
+      "Direct Flash Strobe, high fashion snapshot style",
+      "Golden Rim Silhouette, majestic composition",
+      "Tungsten Industrial Street, wet pavement reflections",
+      "Laser Beam Haze, sharp cyberpunk precision",
+      "Subsurface Scattering, translucent glowing edges",
+      "Ultraviolet Blacklight, fluorescent neon pop",
+      "85mm Portrait Bokeh, shallow depth of field, sharp eyes",
+      "16mm Ultra-Wide Perspective, sweeping dynamic view",
+      "Macro Extreme Close-Up, intricate micro textures",
+      "Low-Angle Hero Shot, monumental powerful framing",
+      "Overhead Bird-Eye Drone, geometric layout",
+      "Tilt-Shift Miniature, toy world selective focus",
+      "Anamorphic 2.39:1 Lens Flare, cinematic horizontal streaks",
+      "Isometric 3D Orthographic, precise architectural render",
+      "Fisheye Dynamic Distortion, curvilinear wide view",
+      "Telephoto Compression, stacked layered depth",
+      "Dutch Angle Canted Tilt, kinetic energy",
+      "Over-The-Shoulder Framing, immersive point of view",
+      "Centered Symmetrical Frame, Wes Anderson staging",
+      "Motion Panning Blur, high speed velocity",
+      "Split-Level Waterline, half-above half-below perspective",
+      "Surveillance CCTV Camera, authentic grain view",
+      "35mm Street Candid, Leica street photography",
+      "Double Exposure Blend, artistic silhouette merge",
+      "Intense Eye-Level Contact, balanced composition",
+      "Long Exposure Light Trails, fluid silky light",
+      "Kodak Portra 35mm Film, nostalgic natural colors, grain",
+      "Hyperrealistic Octane 3D, raytraced reflections 8k",
+      "Makoto Shinkai Anime Cel, vibrant sky, clean clouds",
+      "Impasto Oil Painting, thick textured brushstrokes",
+      "Japanese Ukiyo-e Woodblock, traditional Hokusai lines",
+      "Cyberpunk Retro Synthwave, 1980s chrome grid",
+      "Delicate Watercolor Wash, wet pigment paper texture",
+      "Brutalist Architectural Concrete, monolithic masses",
+      "Risograph Two-Color Print, tactile halftone screen",
+      "Dark Fantasy Matte Painting, weathered ancient stone",
+      "Claymation Stop-Motion, tactile plasticine clay",
+      "Charcoal Chiaroscuro Sketch, expressive smudges",
+      "Polaroid Vintage 1970s, light leak nostalgic fade",
+      "Linocut Relief Print, bold black and white gouge",
+      "Gouache Editorial Poster, flat graphic color fields",
+      "Glassmorphism 3D Translucent, frosted glass caustics",
+      "Papercut Layered Shadowbox, backlit silhouette depth",
+      "Stained Glass Gothic Window, luminous colored glass",
+      "Cyanotype Blueprint Schematic, white technical grid lines",
+      "32-Bit Pixel Art Nostalgia, clean arcade pixel palette",
+      "Ethereal Morning Fog, mountain dew tranquil serenity",
+      "Torrential Rain Downpour, puddle splash ripples",
+      "Blizzard Snow Flakes, frosted crystal winter",
+      "Cosmic Interstellar Nebula, glowing stardust particles",
+      "Volcanic Embers & Ash, incandescent heat floating sparks",
+      "Autumn Breeze Foliage, rust and amber falling leaves",
+      "Underwater Sun Rays, aquatic caustics rising bubbles",
+      "Desert Heat Mirage, shimmering sand dunes",
+      "Enchanted Bioluminescent Forest, glowing mushrooms",
+      "Industrial White Steam, heavy iron structural pipes",
+      "Thundercloud Lightning Horizon, electric purple sky",
+      "Sunny Mediterranean Coastline, azure waves terracotta",
+      "Dense Bamboo Stalks, filtered green tranquil light",
+      "Cyberpunk Skyscraper Rooftop, flying hovercraft lanes",
+      "Nordic Pine Forest, lichen covered granite rocks",
+      "Overgrown Ancient Ruins, ivy and wildflowers",
+      "Amethyst Crystal Cavern, subterranean pool reflection",
+      "Cherry Blossom Petal Vortex, swirling sakura wind",
+      "Foggy Medieval Cobblestone, antique street lamps",
+      "Infinite Mirror Kaleidoscope, optical symmetry",
+      "Cyberpunk Cyan & Magenta, electric neon duotone",
+      "Jewel-Tone Emerald & Amber, rich glowing warmth",
+      "Monochrome Silver Tonal, stark graphic contrast",
+      "Pastel Lilac & Peach Dreamscape, airy delicate tones",
+      "Nordic Earth Muted Tones, slate grey and lichen",
+      "Imperial Metallic Gold & Obsidian, luxury mirror polish",
+      "1950s Technicolor Film, saturated rich primary hues",
+      "Sepia Parchment Archive, antique timeless warmth",
+      "Cobalt Blue & Ultraviolet, electric balance",
+      "Cinnabar Red & Charcoal Gray, dramatic contrast",
+      "Sunset Apricot & Coral, honey gradient horizon",
+      "Mint Green & Terracotta, clean contemporary style",
+      "Midnight Navy & Brass, nautical elegance",
+      "Acid Lime & Pitch Black, vibrant cyber pop",
+      "Pearlescent Opal Shimmer, iridescent color shift",
+      "Dusty Rose & Botanical Sage, understated chic",
+      "Turquoise Copper Patina, oxidized bronze texture",
+      "Monochromatic Solar Ochre, desert golden palette",
+      "Glacial Polar Crystal Blue, frozen turquoise ice",
+      "Cosmic Starlight Magenta, deep space celestial glory"
+    ];
+
+    let currentImages = [];
+    let activeModalIndex = 0;
+    let loadedCount = 0;
+
+    function setPrompt(text) {
+      document.getElementById('promptInput').value = text;
+      startGeneration();
+    }
+
+    function generateSvgDataUrl(prompt, variation, id, seed) {
+      const hue1 = (seed * 37 + id * 19) % 360;
+      const hue2 = (hue1 + 75) % 360;
+      const cleanP = prompt.replace(/[<>&"]/g, '').substring(0, 35);
+      const cleanV = variation.replace(/[<>&"]/g, '').substring(0, 35);
+      
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+        <defs>
+          <linearGradient id="g_${id}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="hsl(${hue1}, 70%, 15%)" />
+            <stop offset="100%" stop-color="hsl(${hue2}, 80%, 7%)" />
+          </linearGradient>
+          <radialGradient id="r_${id}" cx="50%" cy="40%" r="50%">
+            <stop offset="0%" stop-color="hsl(${hue1}, 85%, 60%)" stop-opacity="0.3" />
+            <stop offset="100%" stop-color="hsl(${hue1}, 85%, 60%)" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <rect width="600" height="600" fill="url(#g_${id})" />
+        <circle cx="300" cy="270" r="220" fill="url(#r_${id})" />
+        <circle cx="300" cy="270" r="160" stroke="hsl(${hue1}, 80%, 65%)" stroke-width="2" stroke-dasharray="8 6" fill="none" opacity="0.4" />
+        <text x="40" y="70" fill="#f4f4f5" font-family="monospace" font-size="28" font-weight="700">#${String(id).padStart(3, '0')}</text>
+        <rect x="30" y="500" width="540" height="70" rx="8" fill="rgba(10,10,12,0.85)" stroke="rgba(255,255,255,0.1)" />
+        <text x="50" y="530" fill="#a1a1aa" font-family="monospace" font-size="14">${cleanV}</text>
+        <text x="50" y="555" fill="#fafafa" font-family="sans-serif" font-size="16" font-weight="600">${cleanP}...</text>
+      </svg>`;
+      return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    }
+
+    function startGeneration() {
+      const basePrompt = document.getElementById('promptInput').value.trim() || 'Futuristic art';
+      const engine = document.getElementById('engineSelect').value;
+      const baseSeed = Math.floor(Math.random() * 899999) + 100000;
+      
+      currentImages = [];
+      loadedCount = 0;
+      
+      const loadingBarContainer = document.getElementById('loadingBarContainer');
+      const progressBar = document.getElementById('progressBar');
+      const progressText = document.getElementById('progressText');
+      const gridContainer = document.getElementById('gridContainer');
+      const counterSpan = document.getElementById('loadedCounter');
+      
+      loadingBarContainer.classList.remove('hidden');
+      progressBar.style.width = '0%';
+      progressText.innerText = '0 / 100 dimuat (0%)';
+      gridContainer.innerHTML = '';
+
+      for (let i = 1; i <= 100; i++) {
+        const variation = VARIATIONS[i - 1] || `Variation #${i}`;
+        const fullPrompt = `${basePrompt}, ${variation}, highly detailed, variation #${i}`;
+        const seed = (baseSeed + i * 43) % 999999;
+        const svgFallback = generateSvgDataUrl(basePrompt, variation.split(',')[0], i, seed);
+        
+        let url = svgFallback;
+        if (engine === 'pollinations') {
+          url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt.slice(0, 250))}?seed=${seed}&width=512&height=512&nologo=true`;
+        } else if (engine === 'picsum') {
+          url = `https://picsum.photos/seed/${seed}/512/512`;
+        } else if (engine === 'unsplash') {
+          url = `https://picsum.photos/seed/${seed + 500}/512/512`;
+        }
+
+        const item = {
+          id: i,
+          prompt: basePrompt,
+          variationName: variation.split(',')[0],
+          fullPrompt: fullPrompt,
+          url: url,
+          fallbackUrl: svgFallback,
+          seed: seed
+        };
+        currentImages.push(item);
+
+        const card = document.createElement('div');
+        card.id = `card-${i}`;
+        card.className = "group relative aspect-square rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 hover:border-indigo-500/60 transition duration-200 cursor-pointer shadow-md";
+        card.innerHTML = `
+          <div class="w-full h-full img-loading relative">
+            <img
+              src="${url}"
+              alt="Variation #${i}"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+              class="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+              onload="onImageLoaded(${i})"
+              onerror="onImageError(${i})"
+            />
+          </div>
+          <div class="absolute top-2 left-2 z-10 font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-black/75 text-neutral-200 border border-white/10 backdrop-blur-sm">
+            #${String(i).padStart(3, '0')}
+          </div>
+          <div class="absolute inset-0 z-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end">
+            <div class="text-[11px] font-medium text-indigo-300 truncate">${item.variationName}</div>
+            <div class="text-[10px] text-neutral-400 truncate mb-2">${item.fullPrompt}</div>
+            <div class="flex items-center gap-1.5 pt-1 border-t border-white/10" onclick="event.stopPropagation()">
+              <button onclick="copyCardPrompt(${i})" class="flex-1 py-1 rounded bg-neutral-800/90 hover:bg-neutral-700 text-white text-[10px] font-medium transition text-center cursor-pointer">Salin</button>
+              <button onclick="downloadCardImage(${i})" class="flex-1 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-medium transition text-center cursor-pointer">Simpan</button>
+            </div>
+          </div>
+        `;
+        card.onclick = () => openLightbox(i - 1);
+        gridContainer.appendChild(card);
+      }
+    }
+
+    function onImageLoaded(id) {
+      loadedCount++;
+      const percent = Math.round((loadedCount / 100) * 100);
+      document.getElementById('progressBar').style.width = `${percent}%`;
+      document.getElementById('progressText').innerText = `${loadedCount} / 100 dimuat (${percent}%)`;
+      document.getElementById('loadedCounter').innerText = `${loadedCount} / 100 Gambar Selesai`;
+      
+      const cardImgWrap = document.querySelector(`#card-${id} .img-loading`);
+      if (cardImgWrap) cardImgWrap.classList.remove('img-loading');
+
+      if (loadedCount >= 100) {
+        setTimeout(() => {
+          document.getElementById('loadingBarContainer').classList.add('hidden');
+        }, 1200);
+      }
+    }
+
+    function onImageError(id) {
+      const img = document.querySelector(`#card-${id} img`);
+      if (img && currentImages[id - 1]) {
+        img.src = currentImages[id - 1].fallbackUrl;
+      }
+      onImageLoaded(id);
+    }
+
+    function openLightbox(index) {
+      activeModalIndex = index;
+      const item = currentImages[index];
+      if (!item) return;
+
+      document.getElementById('modalNumberBadge').innerText = `#${String(item.id).padStart(3, '0')} / 100`;
+      document.getElementById('modalVariationName').innerText = item.variationName;
+      document.getElementById('modalImage').src = item.url;
+      document.getElementById('modalFullPrompt').innerText = item.fullPrompt;
+      document.getElementById('lightboxModal').classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightboxModal').classList.add('hidden');
+    }
+
+    function navigateLightbox(delta) {
+      let next = activeModalIndex + delta;
+      if (next < 0) next = currentImages.length - 1;
+      if (next >= currentImages.length) next = 0;
+      openLightbox(next);
+    }
+
+    function copyModalPrompt() {
+      const item = currentImages[activeModalIndex];
+      if (!item) return;
+      navigator.clipboard.writeText(item.fullPrompt).then(() => showToast('Prompt berhasil disalin!'));
+    }
+
+    function copyCardPrompt(id) {
+      const item = currentImages[id - 1];
+      if (!item) return;
+      navigator.clipboard.writeText(item.fullPrompt).then(() => showToast(`Prompt #${id} disalin!`));
+    }
+
+    function downloadCardImage(id) {
+      const item = currentImages[id - 1];
+      if (!item) return;
+      const link = document.createElement('a');
+      link.href = item.url;
+      link.download = `promptgrid-image-${String(id).padStart(3, '0')}.jpg`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast(`Mengunduh gambar #${id}`);
+    }
+
+    function downloadModalImage() {
+      if (currentImages[activeModalIndex]) {
+        downloadCardImage(currentImages[activeModalIndex].id);
+      }
+    }
+
+    function downloadAllManifest() {
+      if (!currentImages.length) {
+        showToast('Generate gambar terlebih dahulu!');
+        return;
+      }
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentImages, null, 2));
+      const dl = document.createElement('a');
+      dl.setAttribute("href", dataStr);
+      dl.setAttribute("download", "promptgrid_100_manifest.json");
+      document.body.appendChild(dl);
+      dl.click();
+      document.body.removeChild(dl);
+      showToast('Katalog 100 prompt berhasil diunduh!');
+    }
+
+    function updateGridColumns(cols) {
+      const grid = document.getElementById('gridContainer');
+      grid.className = "grid gap-3.5 " + (
+        cols === '10' ? "grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10" :
+        cols === '4' ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" :
+        "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+      );
+    }
+
+    function filterRange(range) {
+      document.querySelectorAll('.range-btn').forEach(btn => {
+        btn.classList.remove('bg-neutral-800', 'text-white');
+        btn.classList.add('text-neutral-400');
+      });
+      event.target.classList.add('bg-neutral-800', 'text-white');
+      event.target.classList.remove('text-neutral-400');
+
+      currentImages.forEach(item => {
+        const card = document.getElementById(`card-${item.id}`);
+        if (!card) return;
+        if (range === 'all') {
+          card.classList.remove('hidden');
+        } else if (range === '1-25') {
+          card.classList.toggle('hidden', item.id > 25);
+        } else if (range === '26-50') {
+          card.classList.toggle('hidden', item.id < 26 || item.id > 50);
+        } else if (range === '51-75') {
+          card.classList.toggle('hidden', item.id < 51 || item.id > 75);
+        } else if (range === '76-100') {
+          card.classList.toggle('hidden', item.id < 76);
+        }
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      toastMsg.innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      const modal = document.getElementById('lightboxModal');
+      if (!modal.classList.contains('hidden')) {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') navigateLightbox(-1);
+        if (e.key === 'ArrowRight') navigateLightbox(1);
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      startGeneration();
+    });
+  </script>
+</body>
+</html>
